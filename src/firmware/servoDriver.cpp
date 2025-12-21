@@ -1,6 +1,7 @@
 #include "servoDriver.hpp"
 #include <Servo.h>
 #include "util.h"
+#include "timestep.hpp"
 
 // Settings
 static int servoNeutralPosition = 1500;
@@ -22,10 +23,10 @@ void initServo(int pin)
     servo.writeMicroseconds(currentPosition);
 }
 
-void updateServo(float angle_rad, int timestep_ms)
+void updateServo(float angle_rad)
 {
     int desiredPosition = (int)(angle_rad * servoStepsPerRadiant + 0.5) + servoNeutralPosition;
-    accumulatedTime_us += timestep_ms * 1000;
+    accumulatedTime_us += currentTimestep_us;
     int maxStep_dg = accumulatedTime_us / servoMicrosecPerStep;
     accumulatedTime_us -= maxStep_dg * servoMicrosecPerStep;
     int difference_dg = desiredPosition - currentPosition;
