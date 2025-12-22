@@ -1,35 +1,19 @@
 #include "servoDriver.hpp"
-#include <Servo.h>
-#include "util.h"
 #include "timestep.hpp"
 
-// Settings
-static int servoNeutralPosition = 1500;
-static const float servoStepsPerDegree = 2000.0 / 270.0;
-static const float servoDegreePerSecondLimit = 90;
-
-// Derived setting values
-static const float servoStepsPerRadiant = servoStepsPerDegree / DEG_TO_RAD;
-static const int servoMicrosecPerStep = (int)(1e6 / (servoDegreePerSecondLimit * servoStepsPerDegree) + 0.5);
-
-// State
-static int currentPosition = servoNeutralPosition;
-static int accumulatedTime_us = 0;
-static Servo servo;
-
-void initServo(int pin)
+void ServoDriver::begin(uint8_t pin)
 {
     servo.attach(pin);
     servo.writeMicroseconds(currentPosition);
 }
 
-void updateServo(float angle_rad)
+void ServoDriver::update(float position_rad)
 {
-    int desiredPosition = (int)(angle_rad * servoStepsPerRadiant + 0.5) + servoNeutralPosition;
+    uint16_t desiredPosition = (uint16_t)(position_rad * settings.stepsPerRadiant + 0.5) + neutralPosition;
     accumulatedTime_us += currentTimestep_us;
-    int maxStep_dg = accumulatedTime_us / servoMicrosecPerStep;
-    accumulatedTime_us -= maxStep_dg * servoMicrosecPerStep;
-    int difference_dg = desiredPosition - currentPosition;
+    uint16_t maxStep_dg = accumulatedTime_us / settings.microsecPerStep;
+    accumulatedTime_us -= maxStep_dg * settings.microsecPerStep;
+    int16_t difference_dg = desiredPosition - currentPosition;
 
     if (difference_dg < 0)
     {

@@ -17,9 +17,12 @@ enum class State : uint8_t
 State state = State::AutoComputed;
 int8_t manualSelection = 0;
 
+static const ServoDriverSettings settings(2000.0F / 270.0F, 90.0F);
+static ServoDriver servoDriver(settings, 1500);
+
 void setup()
 {
-    initServo(SERVO_PIN);
+    servoDriver.begin(SERVO_PIN);
 }
 
 void loop()
@@ -36,5 +39,5 @@ void loop()
         position = 0;
     }
 
-    updateServo(position);
+    servoDriver.update(position);
 }
