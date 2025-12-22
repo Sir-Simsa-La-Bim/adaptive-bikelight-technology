@@ -31,7 +31,7 @@ ControlElementAction ControlElement::update()
     uint32_t rightTime_us = rightButton.getSteadyTime_us();
 
     ControlElementAction action = {
-        .direction = Direction::Left,
+        .direction = Direction::None,
         .type = ControlElementActionType::None,
     };
 
@@ -128,7 +128,7 @@ ControlElementAction ControlElement::update()
         else if (leftTime_us >= settings.bothButtonPressThreshold_us && rightTime_us >= settings.bothButtonPressThreshold_us)
         {
             action = (ControlElementAction){
-                .direction = Direction::Left,
+                .direction = Direction::None,
                 .type = ControlElementActionType::BothPressed,
             };
             state = ControlElementState::WaitForNeutral;

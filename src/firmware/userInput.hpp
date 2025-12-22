@@ -56,7 +56,7 @@ enum class ControlElementState : uint8_t
     WaitForNeutral,
 };
 
-enum class ControlElementActionType : unsigned
+enum class ControlElementActionType : uint8_t
 {
     None = 0,
     ShortPress,
@@ -67,8 +67,8 @@ enum class ControlElementActionType : unsigned
 
 struct ControlElementAction
 {
-    Direction direction : 1;
-    ControlElementActionType type : 7;
+    Direction direction;
+    ControlElementActionType type;
 };
 
 class ControlElement

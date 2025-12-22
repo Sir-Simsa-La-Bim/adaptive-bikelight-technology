@@ -2,22 +2,24 @@
 #include "servoDriver.hpp"
 #include "timestep.hpp"
 #include "userInput.hpp"
+#include "util.h"
 
 #define PIN_SERVO 9
 #define PIN_BUTTON_LEFT 12
 #define PIN_BUTTON_RIGHT 11
 
-enum class State : uint8_t
+enum class OperatingMode
 {
-    AutoComputed,
-    AutoHint,
-    AutoFixed,
-    ManualCostum,
-    ManualFixed,
+    Automatic,
+    Manual
 };
 
-static State state = State::AutoComputed;
-static int8_t manualSelection = 0;
+enum class OperatingSubmode
+{
+    Main,
+    Hint,
+    Fixed
+};
 
 static const ServoDriverSettings settings(2000.0F / 270.0F, 90.0F);
 static ServoDriver servoDriver(settings, 1500);
@@ -28,12 +30,20 @@ static const ControlElementSettings controlElementSettings = {
 };
 static ControlElement controlElement(controlElementSettings, PIN_BUTTON_LEFT, PIN_BUTTON_RIGHT);
 
-static float computedDirection = 0;
-static float manualDirection = 0;
+static const float automaticHintStep = 20.0 * DEG_TO_RAD;
+static const float automaticFixedStep = 20.0 * DEG_TO_RAD;
+static const float manualClickStep = 10.0 * DEG_TO_RAD;
+static const float manualFixedStep = 20.0 * DEG_TO_RAD;
+static const int8_t manualStepLimit = 5;
 
-static void input();
-static void evaluate();
-static void output();
+static OperatingMode operatingMode = OperatingMode::Automatic;
+static OperatingSubmode operatingSubmode = OperatingSubmode::Main;
+static Direction operatingDirection = Direction::None;
+static int8_t manualSteps = 0;
+
+static float evaluateAutomaticMode(ControlElementAction action);
+static float evaluateManualMode(ControlElementAction action);
+static float calcAutomaticDirection();
 
 void setup()
 {
@@ -43,76 +53,147 @@ void setup()
 void loop()
 {
     nextTimestep();
-    input();
-    evaluate();
-    output();
+
+    ControlElementAction action = controlElement.update();
+    if (action.type == ControlElementActionType::BothPressed)
+        switchOperatingMode();
+
+    float direction;
+    switch (operatingMode)
+    {
+    case OperatingMode::Automatic:
+        direction = evaluateAutomaticMode(action);
+        break;
+
+    case OperatingMode::Manual:
+    default:
+        direction = evaluateManualMode(action);
+        break;
+    }
+
+    servoDriver.update(direction);
 }
 
-static void input()
+static void switchOperatingMode()
 {
-    ControlElementAction action = controlElement.update();
-    if (action.type != ControlElementActionType::None)
+    switch (operatingMode)
     {
-        const char *text = "";
-        switch (action.type)
+    case OperatingMode::Automatic:
+        operatingMode = OperatingMode::Manual;
+        break;
+
+    case OperatingMode::Manual:
+    default:
+        operatingMode = OperatingMode::Automatic;
+        break;
+    }
+
+    operatingSubmode = OperatingSubmode::Main;
+    operatingDirection = Direction::None;
+    manualSteps = 0;
+}
+
+static float evaluateAutomaticMode(ControlElementAction action)
+{
+    float calculatedDirection = calcAutomaticDirection();
+
+    switch (operatingSubmode)
+    {
+    case OperatingSubmode::Main:
+        if (action.type == ControlElementActionType::ShortPress)
         {
-        case ControlElementActionType::ShortPress:
-            text = "short press";
-            break;
-        case ControlElementActionType::LongPress:
-            text = "long press";
-            break;
-        case ControlElementActionType::LongPressReleased:
-            text = "long press released";
-            break;
-        case ControlElementActionType::BothPressed:
-            text = "both";
-            break;
+            operatingSubmode = OperatingSubmode::Hint;
+            operatingDirection = action.direction;
         }
-
-        Serial.print(text);
-        Serial.print(" ");
-
-        switch (action.direction)
+        else if (action.type == ControlElementActionType::LongPress)
         {
-        case Direction::Left:
-            text = "left";
-            break;
-        case Direction::Right:
-            text = "right";
-            break;
-            ;
+            operatingSubmode = OperatingSubmode::Fixed;
+            operatingDirection = action.direction;
         }
+        break;
 
-        Serial.print(text);
-        Serial.println();
+    case OperatingSubmode::Hint:
+        if (action.type == ControlElementActionType::LongPress)
+        {
+            operatingSubmode = OperatingSubmode::Fixed;
+            operatingDirection = action.direction;
+        }
+        else if (
+            (action.type == ControlElementActionType::ShortPress && action.direction != operatingDirection) ||
+            abs(calculatedDirection) >= automaticHintStep)
+        {
+            operatingSubmode = OperatingSubmode::Main;
+            operatingDirection = Direction::None;
+        }
+        break;
+
+    case OperatingSubmode::Fixed:
+    default:
+        if (action.type == ControlElementActionType::LongPressReleased)
+        {
+            operatingSubmode = OperatingSubmode::Main;
+            operatingDirection = Direction::None;
+        }
+        break;
+    }
+
+    switch (operatingSubmode)
+    {
+    case OperatingSubmode::Main:
+        return calculatedDirection;
+
+    case OperatingSubmode::Hint:
+        return (int8_t)operatingDirection * automaticHintStep;
+
+    case OperatingSubmode::Fixed:
+    default:
+        return (int8_t)operatingDirection * automaticFixedStep;
     }
 }
 
-static void evaluate()
+static float evaluateManualMode(ControlElementAction action)
 {
-    // ToDo: update computed direction
+    switch (operatingSubmode)
+    {
+    case OperatingSubmode::Main:
+        if (action.type == ControlElementActionType::ShortPress)
+        {
+            manualSteps += (int8_t)action.direction;
+            if (manualSteps > manualStepLimit)
+                manualSteps = manualStepLimit;
+            else if (manualSteps < -manualStepLimit)
+                manualSteps = -manualStepLimit;
+        }
+        if (action.type == ControlElementActionType::LongPress)
+        {
+            operatingSubmode = OperatingSubmode::Fixed;
+            operatingDirection = action.direction;
+        }
+        break;
 
-    // switch (state)
-    // {
-    // case State::AutoComputed:
-    //     break;
-    // case State::AutoHint:
-    //     break;
-    // case State::AutoFixed:
-    //     break;
-    // case State::ManualCostum:
-    //     break;
-    // case State::ManualFixed:
-    //     break;
-    // }
+    case OperatingSubmode::Fixed:
+    default:
+        if (action.type == ControlElementActionType::LongPressReleased)
+        {
+            operatingSubmode = OperatingSubmode::Main;
+            operatingDirection = Direction::None;
+            manualSteps = 0;
+        }
+        break;
+    }
+
+    switch (operatingSubmode)
+    {
+    case OperatingSubmode::Main:
+        return manualSteps * manualClickStep;
+
+    case OperatingSubmode::Fixed:
+    default:
+        return (int8_t)operatingDirection * manualFixedStep;
+    }
 }
 
-static void output()
+static float calcAutomaticDirection()
 {
-    float servoPosition =
-        state == State::AutoComputed
-            ? computedDirection
-            : manualDirection;
-    servoDriver.update(servoPosition);
+    return 0;
 }
