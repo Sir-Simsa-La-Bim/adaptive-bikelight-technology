@@ -9,7 +9,7 @@ void ServoDriver::begin(uint8_t pin)
 
 void ServoDriver::update(float position_rad)
 {
-    uint16_t desiredPosition = (uint16_t)(position_rad * settings.stepsPerRadiant + 0.5) + neutralPosition;
+    uint16_t desiredPosition = (uint16_t)(position_rad * settings.stepsPerRadiant + 0.5F) + neutralPosition;
     accumulatedTime_us += currentTimestep_us;
     uint16_t maxStep_dg = accumulatedTime_us / settings.microsecPerStep;
     accumulatedTime_us -= maxStep_dg * settings.microsecPerStep;
