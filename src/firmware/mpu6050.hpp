@@ -19,6 +19,9 @@ namespace MPU6050
         InterruptEnable = 0x38,
         InterrupStatus = 0x3A,
         SensorData = 0x3B,
+        AccelData = 0x3B,
+        TempData = 0x41,
+        GyroData = 0x43,
         UserControl = 0x6A,
         PowerManagement1 = 0x6B,
         PowerManagement2 = 0x6C,
@@ -178,6 +181,11 @@ namespace MPU6050
         Stopped = 7,
     };
 
+    struct SensorDataRegisterContent
+    {
+        uint8_t bytes[14];
+    };
+
     union UserControl
     {
         struct
@@ -233,39 +241,22 @@ namespace MPU6050
 
     /////////////// other ///////////////
 
-    float convertRawToTempDegreeCelcius(int16_t rawValue);
+    extern const float gyroRangeFactorsDeg[];
+    extern const float gyroRangeFactorsRad[];
+    extern const float accelRangeFactorsG[];
+    extern const float accelRangeFactorsSi[];
 
     inline int16_t getInt16Value(uint8_t data[2])
     {
         return ((int16_t)data[0] << 8) | data[1];
     }
 
-    class RawSensorData
+    struct SensorData
     {
-    public:
-        uint8_t data[14];
-
-        Vec3<int16_t> getGyroRawValue();
-        Vec3<int16_t> getAccelRawValue();
-        int16_t getTempRawValue();
-
-        float getTempDegreeCelcius()
-        {
-            return convertRawToTempDegreeCelcius(getTempRawValue());
-        }
-    };
-
-    class CalibratedSensorData
-    {
-    public:
-        Vec3<int16_t> gyro;
-        int16_t temp;
         Vec3<int16_t> accel;
+        Vec3<int16_t> gyro;
 
-        float getTempDegreeCelcius()
-        {
-            return convertRawToTempDegreeCelcius(temp);
-        }
+        void decode(const SensorDataRegisterContent &data);
     };
 
     struct DriverSetupConfig
@@ -274,18 +265,27 @@ namespace MPU6050
         DigitalLowPassFilter filter;
         GyroFullScaleRange gyroRange;
         AccelFullScaleRange accelRange;
-    };
 
-    struct CalibrationSettins
-    {
-        DigitalLowPassFilter filter;
-        uint8_t sampleRateDivider;
-        uint16_t settlingTime_ms;
-    };
+        float getGyroFactorInDeg() const
+        {
+            return gyroRangeFactorsDeg[(uint8_t)gyroRange];
+        }
 
-    extern const CalibrationSettins CALIBRATION_1kHz;
-    extern const CalibrationSettins CALIBRATION_100Hz;
-    extern const CalibrationSettins CALIBRATION_10Hz;
+        float getGyroFactorInRad() const
+        {
+            return gyroRangeFactorsRad[(uint8_t)gyroRange];
+        }
+
+        float getAccelFactorInG() const
+        {
+            return accelRangeFactorsG[(uint8_t)accelRange];
+        }
+
+        float getAccelFactorInSi() const
+        {
+            return accelRangeFactorsSi[(uint8_t)accelRange];
+        }
+    };
 
     /////////////// driver ///////////////
 
@@ -400,9 +400,9 @@ namespace MPU6050
             };
         }
 
-        void getSensorData(RawSensorData &value)
+        void getSensorData(SensorDataRegisterContent &value)
         {
-            connection.readBytes(Register::SensorData, value.data, sizeof(value.data));
+            connection.readBytes(Register::SensorData, value.bytes, sizeof(value.bytes));
         }
 
         void setUserControl(UserControl value)
@@ -424,7 +424,7 @@ namespace MPU6050
         {
             uint8_t data[2];
             connection.readBytes(Register::FifoCount, data, sizeof(data));
-            return ((uint16_t)data[0] << 2) | data[1];
+            return getInt16Value(data);
         }
 
         uint8_t popFifo()
@@ -475,26 +475,10 @@ namespace MPU6050
 
     class Driver
     {
-    private:
+    protected:
         Interface interface;
-        DriverSetupConfig config;
-        Vec3<int16_t> gyroBias;
-        Vec3<int16_t> accelBias;
 
-        void resetGyroCalibration()
-        {
-            gyroBias = Vec3<int16_t>(0, 0, 0);
-        }
-        void resetAccelCalibration()
-        {
-            accelBias = Vec3<int16_t>(0, 0, 0);
-        }
-
-        void setupSilent(const DriverSetupConfig &config);
-        void setSampleRateDividerSilent(uint8_t divider);
-        void setConfigurationSilent(DigitalLowPassFilter filter);
-        void setGyroRangeSilent(GyroFullScaleRange range);
-        void setAccelRangeSilent(AccelFullScaleRange range);
+        DriverError basicSetup(const DriverSetupConfig &config);
 
     public:
         Driver(uint8_t address)
@@ -506,21 +490,14 @@ namespace MPU6050
         {
             interface.begin();
         }
+    };
+
+    class DirectDriver : public Driver
+    {
+    public:
+        DirectDriver(uint8_t address) : Driver(address) {}
 
         DriverError setup(const DriverSetupConfig &config);
-        DriverError setSampleRateDivider(uint8_t divider);
-        DriverError setFilter(DigitalLowPassFilter filter);
-        DriverError setGyroRange(GyroFullScaleRange range);
-        DriverError setAccelRange(AccelFullScaleRange range);
-
-        DriverError zeroCalibrate(const CalibrationSettins &settings, uint16_t sampleCount, Vec3<int16_t> gravity);
-
-        float getGyroFactorInDeg();
-        float getGyroFactorInRad();
-        float getAccelFactorInG();
-        float getAccelFactorInSi();
-
-        DriverError readRawSensorData(RawSensorData &data);
-        DriverError readCalibratedSensorData(CalibratedSensorData &data);
+        DriverError read(SensorData &data);
     };
 };

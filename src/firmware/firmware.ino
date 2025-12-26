@@ -36,7 +36,7 @@ static const float minAngularSpeed_1PerSec = 1e-3;
 static const float minCentripetalAccel_mPerSec2 = 1e-6;
 static const float lightDistance_m = 5.0;
 
-static MPU6050::Driver imuDriver(0x68);
+static MPU6050::DirectDriver imuDriver(0x68);
 static float centripetalAccel_mPerSec2;
 static float angularSpeed_1PerSec;
 
@@ -76,9 +76,9 @@ void setup()
 
     // ToDo: Error handling
     imuError = imuDriver.setup(driverConfig);
-    imuError = imuDriver.zeroCalibrate(MPU6050::CALIBRATION_1kHz, 1000, Vec3<int16_t>(-16701, 0, 0));
 
-    while (!Serial);
+    while (!Serial)
+        ;
 }
 
 void loop()
@@ -110,16 +110,16 @@ void loop()
 static void updateImu()
 {
     // ToDo: Error handling
-    MPU6050::CalibratedSensorData data;
-    MPU6050::DriverError imuError = imuDriver.readCalibratedSensorData(data);
+    MPU6050::SensorData data;
+    MPU6050::DriverError imuError = imuDriver.read(data);
 
     int16_t rawZentripetalAccel = data.accel.y();
     int16_t rawAngularSpeed = data.gyro.x();
 
     // ToDo: Filtering of raw values
 
-    centripetalAccel_mPerSec2 = rawZentripetalAccel * imuDriver.getAccelFactorInSi();
-    angularSpeed_1PerSec = rawAngularSpeed * imuDriver.getGyroFactorInRad();
+    centripetalAccel_mPerSec2 = rawZentripetalAccel * driverConfig.getAccelFactorInSi();
+    angularSpeed_1PerSec = rawAngularSpeed * driverConfig.getGyroFactorInRad();
 
     Serial.print("accel ");
     Serial.print(centripetalAccel_mPerSec2);
