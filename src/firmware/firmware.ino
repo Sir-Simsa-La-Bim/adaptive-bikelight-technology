@@ -36,7 +36,7 @@ static const float minAngularSpeed_1PerSec = 1e-3;
 static const float minCentripetalAccel_mPerSec2 = 1e-6;
 static const float lightDistance_m = 5.0;
 
-static MPU6050::DirectDriver imuDriver(0x68);
+static MPU6050::FifoDriver imuDriver(0x68);
 static float centripetalAccel_mPerSec2;
 static float angularSpeed_1PerSec;
 
@@ -109,23 +109,37 @@ void loop()
 
 static void updateImu()
 {
-    // ToDo: Error handling
     MPU6050::SensorData data;
-    MPU6050::DriverError imuError = imuDriver.read(data);
+    int16_t rawZentripetalAccel, rawAngularSpeed;
 
-    int16_t rawZentripetalAccel = data.accel.y();
-    int16_t rawAngularSpeed = data.gyro.x();
+    int8_t sampleCount = 0;
+    MPU6050::FifoDriverReader reader = imuDriver.read();
 
-    // ToDo: Filtering of raw values
+    while (reader.getNext(data))
+    {
+        // ToDo: Filtering of raw values
+        rawZentripetalAccel = data.accel.y();
+        rawAngularSpeed = data.gyro.x();
 
-    centripetalAccel_mPerSec2 = rawZentripetalAccel * driverConfig.getAccelFactorInSi();
-    angularSpeed_1PerSec = rawAngularSpeed * driverConfig.getGyroFactorInRad();
+        sampleCount++;
+    }
 
-    Serial.print("accel ");
-    Serial.print(centripetalAccel_mPerSec2);
-    Serial.print(" ang speed ");
-    Serial.print(angularSpeed_1PerSec);
-    Serial.println();
+    // ToDo: Error handling
+    MPU6050::DriverError error = reader.getError();
+
+    if (sampleCount > 0)
+    {
+        centripetalAccel_mPerSec2 = rawZentripetalAccel * driverConfig.getAccelFactorInSi();
+        angularSpeed_1PerSec = rawAngularSpeed * driverConfig.getGyroFactorInRad();
+
+        Serial.print("samples ");
+        Serial.print(sampleCount);
+        Serial.print(" accel ");
+        Serial.print(centripetalAccel_mPerSec2);
+        Serial.print(" ang speed ");
+        Serial.print(angularSpeed_1PerSec);
+        Serial.println();
+    }
 }
 
 static void switchOperatingMode()
@@ -253,10 +267,5 @@ static float calcAutomaticDirection()
         return 0;
 
     float lightAngle = asin(0.5 * lightDistance_m * angularSpeed_1PerSec * angularSpeed_1PerSec / centripetalAccel_mPerSec2);
-
-    Serial.print("ligth angle: ");
-    Serial.print(lightAngle);
-    Serial.println();
-
     return lightAngle;
 }

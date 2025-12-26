@@ -118,17 +118,30 @@ namespace MPU6050
         i2c_stop();
     }
 
-    void SensorData::decode(const SensorDataRegisterContent &data)
+    void SensorData::decode(const SensorDataRegisterContent &rawData)
     {
         accel = Vec3<int16_t>(
-            getInt16Value(&data.bytes[0]),
-            getInt16Value(&data.bytes[2]),
-            getInt16Value(&data.bytes[4]));
+            getInt16Value(&rawData.bytes[0]),
+            getInt16Value(&rawData.bytes[2]),
+            getInt16Value(&rawData.bytes[4]));
 
         gyro = Vec3<int16_t>(
-            getInt16Value(&data.bytes[8]),
-            getInt16Value(&data.bytes[10]),
-            getInt16Value(&data.bytes[12]));
+            getInt16Value(&rawData.bytes[8]),
+            getInt16Value(&rawData.bytes[10]),
+            getInt16Value(&rawData.bytes[12]));
+    }
+
+    void SensorData::decode(const FifoSensorData &rawData)
+    {
+        accel = Vec3<int16_t>(
+            getInt16Value(&rawData.bytes[0]),
+            getInt16Value(&rawData.bytes[2]),
+            getInt16Value(&rawData.bytes[4]));
+
+        gyro = Vec3<int16_t>(
+            getInt16Value(&rawData.bytes[6]),
+            getInt16Value(&rawData.bytes[8]),
+            getInt16Value(&rawData.bytes[10]));
     }
 
     DriverError Driver::basicSetup(const DriverSetupConfig &config)
@@ -224,5 +237,100 @@ namespace MPU6050
         data.decode(rawData);
 
         return DriverError::Success;
+    }
+
+    DriverError FifoDriver::setup(const DriverSetupConfig &config)
+    {
+        DriverError error = basicSetup(config);
+        if (error != DriverError::Success)
+            return error;
+
+        interface.setFifoEnable((FifoEnable){
+            .fields = {
+                .external0 = false,
+                .external1 = false,
+                .external2 = false,
+                .accelXYZ = true,
+                .gyroZ = true,
+                .gyroY = true,
+                .gyroX = true,
+                .temp = false,
+            },
+        });
+
+        interface.setUserControl((UserControl){
+            .fields = {
+                .resetAllSignalPaths = false,
+                .resetI2cMaster = false,
+                .resetFifo = true,
+                .enableI2cMasterMode = false,
+                .fifoEnable = true,
+            },
+        });
+
+        return DriverError::Success;
+    }
+
+    bool FifoDriverReader::popNextFromFifo(SensorData &data)
+    {
+        interface.popFifo(dataBuffer.bytes, sizeof(dataBuffer.bytes));
+        availableDataCount -= sizeof(dataBuffer.bytes);
+
+        if (interface.hasError())
+        {
+            error |= DriverError::ConnectionError;
+            return false;
+        }
+
+        data.decode(dataBuffer);
+        return true;
+    }
+
+    bool FifoDriverReader::getNext(SensorData &data)
+    {
+        interface.resetError();
+
+        if (availableDataCount >= sizeof(dataBuffer.bytes))
+            return popNextFromFifo(data);
+
+        uint16_t newFifoCount = interface.getFifoCount();
+        if (interface.hasError())
+        {
+            error |= DriverError::ConnectionError;
+            return false;
+        }
+
+        availableDataCount = newFifoCount;
+        if (newFifoCount < sizeof(dataBuffer.bytes))
+            return false;
+
+        bool result = popNextFromFifo(data);
+
+        interface.resetError();
+
+        InterruptStatus status = interface.getInterruptStatus();
+        if (interface.hasError())
+        {
+            error |= DriverError::ConnectionError;
+            return false;
+        }
+        if (status.fields.fifoOverflow)
+        {
+            error |= DriverError::FifoOverflow;
+
+            interface.setUserControl((UserControl){
+                .fields = {
+                    .resetAllSignalPaths = false,
+                    .resetI2cMaster = false,
+                    .resetFifo = true,
+                    .enableI2cMasterMode = false,
+                    .fifoEnable = true,
+                },
+            });
+
+            return false;
+        }
+
+        return result;
     }
 }

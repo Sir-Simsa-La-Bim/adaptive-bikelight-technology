@@ -251,12 +251,18 @@ namespace MPU6050
         return ((int16_t)data[0] << 8) | data[1];
     }
 
+    struct FifoSensorData
+    {
+        uint8_t bytes[12];
+    };
+
     struct SensorData
     {
         Vec3<int16_t> accel;
         Vec3<int16_t> gyro;
 
-        void decode(const SensorDataRegisterContent &data);
+        void decode(const SensorDataRegisterContent &rawData);
+        void decode(const FifoSensorData &rawData);
     };
 
     struct DriverSetupConfig
@@ -469,9 +475,20 @@ namespace MPU6050
     enum class DriverError : uint8_t
     {
         Success = 0,
-        ConnectionError = 1,
-        UnknownDevice = 2,
+        ConnectionError = 1 << 1,
+        UnknownDevice = 1 << 2,
+        FifoOverflow = 1 << 3,
     };
+
+    inline DriverError operator|(DriverError a, DriverError b)
+    {
+        return (DriverError)((uint8_t)a | (uint8_t)b);
+    }
+
+    inline DriverError operator|=(DriverError &a, DriverError b)
+    {
+        return a = (a | b);
+    }
 
     class Driver
     {
@@ -499,5 +516,48 @@ namespace MPU6050
 
         DriverError setup(const DriverSetupConfig &config);
         DriverError read(SensorData &data);
+    };
+
+    class FifoDriverReader
+    {
+    private:
+        Interface &interface;
+        DriverError error;
+        uint16_t availableDataCount;
+        FifoSensorData dataBuffer;
+
+        FifoDriverReader() = delete;
+
+        FifoDriverReader(Interface &interface)
+            : interface(interface)
+        {
+            error = DriverError::Success;
+            availableDataCount = 0;
+        }
+
+        bool popNextFromFifo(SensorData &data);
+
+    public:
+        bool getNext(SensorData &data);
+
+        DriverError getError() const
+        {
+            return error;
+        }
+
+        friend class FifoDriver;
+    };
+
+    class FifoDriver : public Driver
+    {
+    public:
+        FifoDriver(uint8_t address) : Driver(address) {}
+
+        DriverError setup(const DriverSetupConfig &config);
+
+        FifoDriverReader read()
+        {
+            return FifoDriverReader(interface);
+        }
     };
 };
