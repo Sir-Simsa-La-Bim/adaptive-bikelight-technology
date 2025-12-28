@@ -14,33 +14,33 @@ namespace MPU6050
     static const uint8_t whoamiCode = 0x68;
 
     const float gyroRangeFactorsDeg[] = {
-        250.0F / (1 << 15),
-        500.0F / (1 << 15),
-        1000.0F / (1 << 15),
-        2000.0F / (1 << 15),
+        250.0F / (1uL << 15),
+        500.0F / (1uL << 15),
+        1000.0F / (1uL << 15),
+        2000.0F / (1uL << 15),
     };
 
     const float gyroRangeFactorsRad[] = {
-        250.0F / (1 << 15) * DEG_TO_RAD,
-        500.0F / (1 << 15) * DEG_TO_RAD,
-        1000.0F / (1 << 15) * DEG_TO_RAD,
-        2000.0F / (1 << 15) * DEG_TO_RAD,
+        250.0F / (1uL << 15) * DEG_TO_RAD,
+        500.0F / (1uL << 15) * DEG_TO_RAD,
+        1000.0F / (1uL << 15) * DEG_TO_RAD,
+        2000.0F / (1uL << 15) * DEG_TO_RAD,
     };
 
     const float accelRangeFactorsG[] = {
-        2.0F / (1 << 15),
-        4.0F / (1 << 15),
-        8.0F / (1 << 15),
-        16.0F / (1 << 15),
+        2.0F / (1uL << 15),
+        4.0F / (1uL << 15),
+        8.0F / (1uL << 15),
+        16.0F / (1uL << 15),
     };
 
     static const float g_si = 9.81;
 
     const float accelRangeFactorsSi[] = {
-        2.0F / (1 << 15) * g_si,
-        4.0F / (1 << 15) * g_si,
-        8.0F / (1 << 15) * g_si,
-        16.0F / (1 << 15) * g_si,
+        2.0F / (1uL << 15) * g_si,
+        4.0F / (1uL << 15) * g_si,
+        8.0F / (1uL << 15) * g_si,
+        16.0F / (1uL << 15) * g_si,
     };
 
     void Connection::begin()
