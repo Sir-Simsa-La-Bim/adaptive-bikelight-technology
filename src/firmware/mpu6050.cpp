@@ -9,8 +9,6 @@
 #define I2C_FASTMODE 1
 #include <SoftI2CMaster.h>
 
-#include <hardwareSerial.h>
-
 namespace MPU6050
 {
     static const uint8_t whoamiCode = 0x68;
@@ -222,6 +220,20 @@ namespace MPU6050
     DriverError DirectDriver::setup(const DriverSetupConfig &config)
     {
         return basicSetup(config);
+    }
+
+    DriverError DirectDriver::available(bool &result)
+    {
+        interface.resetError();
+
+        InterruptStatus status = interface.getInterruptStatus();
+
+        if (interface.hasError())
+            return DriverError::ConnectionError;
+
+        result = status.fields.dataReady;
+
+        return DriverError::Success;
     }
 
     DriverError DirectDriver::read(SensorData &data)

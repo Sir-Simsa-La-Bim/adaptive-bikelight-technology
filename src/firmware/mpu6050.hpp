@@ -515,6 +515,7 @@ namespace MPU6050
         DirectDriver(uint8_t address) : Driver(address) {}
 
         DriverError setup(const DriverSetupConfig &config);
+        DriverError available(bool &result);
         DriverError read(SensorData &data);
     };
 
