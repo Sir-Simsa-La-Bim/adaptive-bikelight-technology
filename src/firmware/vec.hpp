@@ -15,6 +15,13 @@ public:
         values[2] = z;
     }
 
+    Vec3(T values[3])
+    {
+        this->values[0] = values[0];
+        this->values[1] = values[1];
+        this->values[2] = values[2];
+    }
+
     T &x()
     {
         return values[0];

@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <Servo.h>
-#include "util.h"
+#include "util.hpp"
 
 class ServoDriverSettings
 {

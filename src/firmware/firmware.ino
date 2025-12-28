@@ -3,7 +3,7 @@
 #include "servoDriver.hpp"
 #include "timestep.hpp"
 #include "userInput.hpp"
-#include "util.h"
+#include "util.hpp"
 #include "mpu6050.hpp"
 #include "vec.hpp"
 

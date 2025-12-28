@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "util.h"
+#include "util.hpp"
 #include "vec.hpp"
 
 namespace MPU6050
