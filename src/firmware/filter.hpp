@@ -20,9 +20,7 @@ private:
     void updateInternal(Tentry value);
 
 public:
-    MovAvgFilter()
-    {
-    }
+    MovAvgFilter() = delete;
 
     void reset();
 
@@ -65,9 +63,7 @@ private:
     void shiftEntryIndex();
 
 public:
-    MedianFilter()
-    {
-    }
+    MedianFilter() = delete;
 
     void reset(Tentry fillValue);
 
@@ -89,9 +85,15 @@ private:
     MovAvgFilter<Tsize, Tentry, Tsum> movAvgFilter;
 
 public:
-    CombinedFilter() = default;
+    CombinedFilter() = delete;
 
-    CombinedFilter(Tentry *totalFilterBuffer, Tsize medianFilterLength, Tsize movAvgFilterLength, Tentry fillValue)
+    CombinedFilter(Tentry *medianFilterBuffer, Tsize medianFilterLength, Tentry *movAvgFilterBuffer, Tsize movAvgFilterLength, Tentry fillValue = Tentry())
+        : medianFilter(medianFilterBuffer, medianFilterLength, fillValue),
+          movAvgFilter(movAvgFilterBuffer, movAvgFilterLength)
+    {
+    }
+
+    CombinedFilter(Tentry *totalFilterBuffer, Tsize medianFilterLength, Tsize movAvgFilterLength, Tentry fillValue = Tentry())
         : medianFilter(totalFilterBuffer, medianFilterLength, fillValue),
           movAvgFilter(totalFilterBuffer + medianFilterLength, movAvgFilterLength)
     {
@@ -143,9 +145,9 @@ void MovAvgFilter<Tsize, Tentry, Tsum>::updateInternal(Tentry value)
 
     bool isPoppingOldEntry = entryIndex < fill;
     if (isPoppingOldEntry)
-        sum -= currBufferEntry;
+        sum -= (Tsum)currBufferEntry;
 
-    sum += value;
+    sum += (Tsum)value;
     currBufferEntry = value;
 
     entryIndex++;

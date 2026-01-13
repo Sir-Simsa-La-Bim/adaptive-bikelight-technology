@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "imu.hpp"
 #include "util.hpp"
 #include "vec.hpp"
 
@@ -184,6 +185,8 @@ namespace MPU6050
     struct SensorDataRegisterContent
     {
         uint8_t bytes[14];
+
+        void decode(ImuData &result);
     };
 
     union UserControl
@@ -241,10 +244,15 @@ namespace MPU6050
 
     /////////////// other ///////////////
 
-    extern const float gyroRangeFactorsDeg[];
-    extern const float gyroRangeFactorsRad[];
-    extern const float accelRangeFactorsG[];
-    extern const float accelRangeFactorsSi[];
+    extern const float gyroRangeBaseFactor_deg;
+    extern const float gyroRangeBaseFactor_rad;
+    extern const float accelRangeBaseFactor_g;
+    extern const float accelRangeBaseFactor_si;
+
+    extern const float gyroRangeFactors_deg[];
+    extern const float gyroRangeFactors_rad[];
+    extern const float accelRangeFactors_g[];
+    extern const float accelRangeFactors_si[];
 
     inline int16_t getInt16Value(uint8_t data[2])
     {
@@ -254,15 +262,8 @@ namespace MPU6050
     struct FifoSensorData
     {
         uint8_t bytes[12];
-    };
 
-    struct SensorData
-    {
-        Vec3<int16_t> accel;
-        Vec3<int16_t> gyro;
-
-        void decode(const SensorDataRegisterContent &rawData);
-        void decode(const FifoSensorData &rawData);
+        void decode(ImuData &result);
     };
 
     struct DriverSetupConfig
@@ -272,24 +273,32 @@ namespace MPU6050
         GyroFullScaleRange gyroRange;
         AccelFullScaleRange accelRange;
 
-        float getGyroFactorInDeg() const
+        constexpr float getGyroFactor_deg() const
         {
-            return gyroRangeFactorsDeg[(uint8_t)gyroRange];
+            return gyroRangeFactors_deg[(uint8_t)gyroRange];
         }
 
-        float getGyroFactorInRad() const
+        constexpr float getGyroFactor_rad() const
         {
-            return gyroRangeFactorsRad[(uint8_t)gyroRange];
+            return gyroRangeFactors_rad[(uint8_t)gyroRange];
         }
 
-        float getAccelFactorInG() const
+        constexpr float getAccelFactor_g() const
         {
-            return accelRangeFactorsG[(uint8_t)accelRange];
+            return accelRangeFactors_g[(uint8_t)accelRange];
         }
 
-        float getAccelFactorInSi() const
+        constexpr float getAccelFactor_si() const
         {
-            return accelRangeFactorsSi[(uint8_t)accelRange];
+            return accelRangeFactors_si[(uint8_t)accelRange];
+        }
+
+        constexpr ImuRangeFactors getRangeFactors() const
+        {
+            return (ImuRangeFactors){
+                .gyroFactor_rad = getGyroFactor_rad(),
+                .accelFactor_si = getAccelFactor_si(),
+            };
         }
     };
 
@@ -507,6 +516,11 @@ namespace MPU6050
         {
             interface.begin();
         }
+
+        Interface &getInterface()
+        {
+            return interface;
+        }
     };
 
     class DirectDriver : public Driver
@@ -516,7 +530,7 @@ namespace MPU6050
 
         DriverError setup(const DriverSetupConfig &config);
         DriverError available(bool &result);
-        DriverError read(SensorData &data);
+        DriverError read(ImuData &data);
     };
 
     class FifoDriverReader
@@ -536,10 +550,10 @@ namespace MPU6050
             availableDataCount = 0;
         }
 
-        bool popNextFromFifo(SensorData &data);
+        bool popNextFromFifo(ImuData &data);
 
     public:
-        bool getNext(SensorData &data);
+        bool getNext(ImuData &data);
 
         DriverError getError() const
         {

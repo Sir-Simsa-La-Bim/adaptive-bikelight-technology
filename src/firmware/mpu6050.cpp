@@ -13,34 +13,37 @@ namespace MPU6050
 {
     static const uint8_t whoamiCode = 0x68;
 
-    const float gyroRangeFactorsDeg[] = {
-        250.0F / (1uL << 15),
-        500.0F / (1uL << 15),
-        1000.0F / (1uL << 15),
-        2000.0F / (1uL << 15),
+    const float gyroRangeBaseFactor_deg = 250.0F / (1uL << 15);
+    const float gyroRangeBaseFactor_rad = DEG_TO_RAD * gyroRangeBaseFactor_deg;
+    const float accelRangeBaseFactor_g = 2.0F / (1uL << 15);
+    const float accelRangeBaseFactor_si = accelRangeBaseFactor_g * gravityAccel_si;
+
+    const float gyroRangeFactors_deg[] = {
+        gyroRangeBaseFactor_deg,
+        gyroRangeBaseFactor_deg * 2,
+        gyroRangeBaseFactor_deg * 4,
+        gyroRangeBaseFactor_deg * 8,
     };
 
-    const float gyroRangeFactorsRad[] = {
-        250.0F / (1uL << 15) * DEG_TO_RAD,
-        500.0F / (1uL << 15) * DEG_TO_RAD,
-        1000.0F / (1uL << 15) * DEG_TO_RAD,
-        2000.0F / (1uL << 15) * DEG_TO_RAD,
+    const float gyroRangeFactors_rad[] = {
+        gyroRangeBaseFactor_rad,
+        gyroRangeBaseFactor_rad * 2,
+        gyroRangeBaseFactor_rad * 4,
+        gyroRangeBaseFactor_rad * 8,
     };
 
-    const float accelRangeFactorsG[] = {
-        2.0F / (1uL << 15),
-        4.0F / (1uL << 15),
-        8.0F / (1uL << 15),
-        16.0F / (1uL << 15),
+    const float accelRangeFactors_g[] = {
+        accelRangeBaseFactor_g,
+        accelRangeBaseFactor_g * 2,
+        accelRangeBaseFactor_g * 4,
+        accelRangeBaseFactor_g * 8,
     };
 
-    static const float g_si = 9.81;
-
-    const float accelRangeFactorsSi[] = {
-        2.0F / (1uL << 15) * g_si,
-        4.0F / (1uL << 15) * g_si,
-        8.0F / (1uL << 15) * g_si,
-        16.0F / (1uL << 15) * g_si,
+    const float accelRangeFactors_si[] = {
+        accelRangeBaseFactor_si,
+        accelRangeBaseFactor_si * 2,
+        accelRangeBaseFactor_si * 4,
+        accelRangeBaseFactor_si * 8,
     };
 
     void Connection::begin()
@@ -116,30 +119,24 @@ namespace MPU6050
         i2c_stop();
     }
 
-    void SensorData::decode(const SensorDataRegisterContent &rawData)
+    void SensorDataRegisterContent::decode(ImuData &result)
     {
-        accel = Vec3<int16_t>(
-            getInt16Value(&rawData.bytes[0]),
-            getInt16Value(&rawData.bytes[2]),
-            getInt16Value(&rawData.bytes[4]));
-
-        gyro = Vec3<int16_t>(
-            getInt16Value(&rawData.bytes[8]),
-            getInt16Value(&rawData.bytes[10]),
-            getInt16Value(&rawData.bytes[12]));
+        result.fields.accelX = getInt16Value(&bytes[0]);
+        result.fields.accelY = getInt16Value(&bytes[2]);
+        result.fields.accelZ = getInt16Value(&bytes[4]);
+        result.fields.gyroX = getInt16Value(&bytes[8]);
+        result.fields.gyroY = getInt16Value(&bytes[10]);
+        result.fields.gyroZ = getInt16Value(&bytes[12]);
     }
 
-    void SensorData::decode(const FifoSensorData &rawData)
+    void FifoSensorData::decode(ImuData &result)
     {
-        accel = Vec3<int16_t>(
-            getInt16Value(&rawData.bytes[0]),
-            getInt16Value(&rawData.bytes[2]),
-            getInt16Value(&rawData.bytes[4]));
-
-        gyro = Vec3<int16_t>(
-            getInt16Value(&rawData.bytes[6]),
-            getInt16Value(&rawData.bytes[8]),
-            getInt16Value(&rawData.bytes[10]));
+        result.fields.accelX = getInt16Value(&bytes[0]);
+        result.fields.accelY = getInt16Value(&bytes[2]);
+        result.fields.accelZ = getInt16Value(&bytes[4]);
+        result.fields.gyroX = getInt16Value(&bytes[6]);
+        result.fields.gyroY = getInt16Value(&bytes[8]);
+        result.fields.gyroZ = getInt16Value(&bytes[10]);
     }
 
     DriverError Driver::basicSetup(const DriverSetupConfig &config)
@@ -236,7 +233,7 @@ namespace MPU6050
         return DriverError::Success;
     }
 
-    DriverError DirectDriver::read(SensorData &data)
+    DriverError DirectDriver::read(ImuData &data)
     {
         interface.resetError();
 
@@ -246,7 +243,7 @@ namespace MPU6050
         if (interface.hasError())
             return DriverError::ConnectionError;
 
-        data.decode(rawData);
+        rawData.decode(data);
 
         return DriverError::Success;
     }
@@ -283,7 +280,7 @@ namespace MPU6050
         return DriverError::Success;
     }
 
-    bool FifoDriverReader::popNextFromFifo(SensorData &data)
+    bool FifoDriverReader::popNextFromFifo(ImuData &data)
     {
         interface.popFifo(dataBuffer.bytes, sizeof(dataBuffer.bytes));
         availableDataCount -= sizeof(dataBuffer.bytes);
@@ -294,11 +291,12 @@ namespace MPU6050
             return false;
         }
 
-        data.decode(dataBuffer);
+        dataBuffer.decode(data);
+
         return true;
     }
 
-    bool FifoDriverReader::getNext(SensorData &data)
+    bool FifoDriverReader::getNext(ImuData &data)
     {
         interface.resetError();
 
@@ -345,4 +343,5 @@ namespace MPU6050
 
         return result;
     }
+
 }
