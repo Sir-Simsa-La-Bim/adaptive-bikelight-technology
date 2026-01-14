@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include "imu.hpp"
 #include "filter.hpp"
-#include "fixed.hpp"
 
 struct CircularMotionData
 {
