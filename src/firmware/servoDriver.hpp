@@ -28,7 +28,7 @@ private:
     const ServoDriverSettings &settings;
     uint16_t neutralPosition;
     uint16_t currentPosition;
-    uint32_t accumulatedTime_us;
+    uint16_t accumulatedTime_us;
     Servo servo;
 
 public:

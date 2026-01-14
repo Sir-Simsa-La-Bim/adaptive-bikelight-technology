@@ -2,15 +2,27 @@
 #include <Arduino.h>
 
 uint64_t currentTimestamp_us = 0;
-uint32_t currentTimestep_us = 0;
-uint16_t currentTimestep_ms = 0;
+uint32_t currentTimestamp_ms = 0;
+uint16_t currentTimestep_us = 0;
+uint8_t currentTimestep_ms = 0;
 
 void nextTimestep()
 {
-    uint32_t lastTimestep_us = (uint32_t)currentTimestamp_us;
+    uint16_t lastTimestep_us = (uint16_t)currentTimestamp_us;
     currentTimestamp_us = micros();
-    currentTimestep_us = (uint32_t)currentTimestamp_us - lastTimestep_us;
-    currentTimestep_ms = currentTimestep_us / 1000;
+    currentTimestep_us = (uint16_t)currentTimestamp_us - lastTimestep_us;
+
+    static uint16_t timestepAccumulation_us = 0;
+
+    currentTimestep_ms = 0;
+    timestepAccumulation_us += currentTimestep_us;
+    while (timestepAccumulation_us > 1000)
+    {
+        timestepAccumulation_us -= 100;
+        currentTimestep_ms++;
+    }
+
+    currentTimestamp_ms += currentTimestep_ms;
 }
 
 TimeoutGuard::TimeoutGuard(uint16_t timeout_ms)

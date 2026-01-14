@@ -14,7 +14,8 @@ public:
 };
 
 extern uint64_t currentTimestamp_us;
-extern uint32_t currentTimestep_us;
-extern uint16_t currentTimestep_ms;
+extern uint32_t currentTimestamp_ms;
+extern uint16_t currentTimestep_us;
+extern uint8_t currentTimestep_ms;
 
 void nextTimestep();
