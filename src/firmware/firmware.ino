@@ -25,7 +25,6 @@ enum class OperatingSubmode
     Fixed
 };
 
-// ToDo: add good values
 static const float lightDistance_m = 5.0;
 
 static const MPU6050::DriverSetupConfig imuSetup = {

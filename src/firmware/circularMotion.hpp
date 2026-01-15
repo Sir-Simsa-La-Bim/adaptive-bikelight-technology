@@ -48,7 +48,6 @@ public:
     friend class CircularMotionProcessor;
 };
 
-// ToDo: calibration
 class CircularMotionProcessor
 {
 private:
