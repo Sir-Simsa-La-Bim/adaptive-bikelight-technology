@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <Servo.h>
+#include "compiler_switches.h"
 #include "util.hpp"
 
 class ServoDriverSettings

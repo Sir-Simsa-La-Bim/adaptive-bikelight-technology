@@ -1,8 +1,13 @@
 #pragma once
 
 #include <stdint.h>
+#include "compiler_switches.h"
 #include "imu.hpp"
 #include "filter.hpp"
+
+#if ENABLE_INTERFACE
+#include "interface.hpp"
+#endif
 
 struct CircularMotionData
 {
@@ -13,6 +18,19 @@ typedef int16_t EncodedRadius;
 typedef MovAvgFilter<uint8_t, int16_t, int32_t> RawValueFilter;
 typedef CombinedFilter<uint8_t, EncodedRadius, int32_t> RadiusFilter;
 
+class CircularMotionCalibration
+{
+public:
+    int16_t gyroOffsetX;
+    int16_t gyroOffsetY;
+
+    CircularMotionCalibration()
+    {
+        gyroOffsetX = 0;
+        gyroOffsetY = 0;
+    }
+};
+
 class CircularMotionCalibrationBuilder
 {
 private:
@@ -20,7 +38,7 @@ private:
     int32_t gyroYAcc;
     uint16_t sampleCount;
 
-    int16_t calcOffset(int32_t accValue)
+    int16_t calcOffset(int32_t accValue) const
     {
         return -(int16_t)(accValue / sampleCount);
     }
@@ -33,7 +51,7 @@ public:
         sampleCount = 0;
     }
 
-    uint16_t getSampleCount()
+    uint16_t getSampleCount() const
     {
         return sampleCount;
     }
@@ -45,14 +63,13 @@ public:
         sampleCount++;
     }
 
-    friend class CircularMotionProcessor;
+    void build(CircularMotionCalibration &calibration) const;
 };
 
 class CircularMotionProcessor
 {
 private:
-    int16_t gyroOffsetX;
-    int16_t gyroOffsetY;
+    CircularMotionCalibration calibration;
 
     MovAvgFilter<uint8_t, int16_t, int32_t> gyroXFilter;
     MovAvgFilter<uint8_t, int16_t, int32_t> gyroYFilter;
@@ -68,12 +85,21 @@ public:
     CircularMotionProcessor(MovAvgFilter<uint8_t, int16_t, int32_t> gyroXFilter,
                             MovAvgFilter<uint8_t, int16_t, int32_t> gyroYFilter,
                             CombinedFilter<uint8_t, EncodedRadius, int32_t> radiusFilter)
-        : gyroXFilter(gyroXFilter), gyroYFilter(gyroYFilter), radiusFilter(radiusFilter)
+        : gyroXFilter(gyroXFilter), gyroYFilter(gyroYFilter), radiusFilter(radiusFilter), calibration()
     {
-        gyroOffsetX = 0;
-        gyroOffsetY = 0;
     }
 
-    void setCalibration(CircularMotionCalibrationBuilder &calibration);
+    void setCalibration(const CircularMotionCalibrationBuilder &builder)
+    {
+        builder.build(calibration);
+    }
+
     void update(const ImuData &imuData, const ImuRangeFactors &imuRange, CircularMotionData &result);
+
+#if ENABLE_INTERFACE
+    constexpr ParamDef getCalibrationAsParameter()
+    {
+        return param(&calibration);
+    }
+#endif
 };

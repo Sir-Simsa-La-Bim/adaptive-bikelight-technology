@@ -1,5 +1,7 @@
 #pragma once
 
+#include "compiler_switches.h"
+
 template <class T>
 struct Vec3
 {

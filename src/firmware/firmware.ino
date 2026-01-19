@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <math.h>
+#include "compiler_switches.h"
 #include "servoDriver.hpp"
 #include "timestep.hpp"
 #include "userInput.hpp"
@@ -7,23 +8,37 @@
 #include "mpu6050.hpp"
 #include "circularMotion.hpp"
 
+#if ENABLE_INTERFACE
+#include "interface.hpp"
+#endif
+
 #define PIN_SERVO 9
 #define PIN_BUTTON_LEFT 12
 #define PIN_BUTTON_RIGHT 11
 #define PIN_LED 13
 
-enum class OperatingMode
+enum class OperatingMode : uint8_t
 {
     Automatic,
     Manual
 };
 
-enum class OperatingSubmode
+enum class OperatingSubmode : uint8_t
 {
     Main,
     Hint,
     Fixed
 };
+
+#if ENABLE_INTERFACE
+enum class InterfaceImuMode : uint8_t
+{
+    Running,
+    FreezeImuData,
+    FreezeMotionData,
+    FreezeAutomaticDirection,
+};
+#endif
 
 static const float lightDistance_m = 5.0;
 
@@ -80,6 +95,29 @@ static Direction operatingDirection = Direction::None;
 static int8_t manualSteps = 0;
 static float automaticDirection = 0;
 
+#if ENABLE_INTERFACE
+static InterfaceImuMode imuMode = InterfaceImuMode::Running;
+static uint16_t imuTimestamp;
+static ImuData imuData;
+static CircularMotionData motionData;
+
+static const ParamDef paramTable[] = {
+    /* 0: */ param(&operatingMode),
+    /* 1: */ param(&operatingSubmode),
+    /* 2: */ param(&operatingDirection),
+    /* 3: */ param(&manualSteps),
+    /* 4: */ param(&automaticDirection),
+
+    /* 5: */ param(&imuMode),
+    /* 6: */ param(&imuTimestamp),
+    /* 7: */ motionProcessor.getCalibrationAsParameter(),
+    /* 8: */ param(&imuData),
+    /* 9: */ param(&motionData),
+};
+
+static UserInterface userInterface(Serial, paramTable, ARRAY_SIZE(paramTable));
+#endif
+
 static void imuApplySetup();
 static void imuCalibrationSequence();
 static void switchOperatingMode();
@@ -89,9 +127,13 @@ static float evaluateManualMode(ControlElementAction action);
 
 void setup()
 {
-    Serial.begin(115200);
-    while (!Serial)
-        ;
+#if (ENABLE_INTERFACE)
+    {
+        Serial.begin(115200);
+        while (!Serial)
+            ;
+    }
+#endif
 
     statusLed.begin();
     servoDriver.begin(PIN_SERVO);
@@ -127,6 +169,10 @@ void loop()
 
     servoDriver.update(direction);
     statusLed.update();
+
+#if ENABLE_INTERFACE
+    userInterface.update();
+#endif
 }
 
 static void imuApplySetup()
@@ -207,25 +253,46 @@ static void updateCurveData()
     if (!hasDataAvailable)
         return;
 
+#if ENABLE_INTERFACE
+    if (imuMode != InterfaceImuMode::FreezeImuData)
+#else
     ImuData imuData;
-    driverError = imuDriver.read(imuData);
-    if (driverError != MPU6050::DriverError::Success)
+#endif
     {
-        statusLed.notifyError();
-        return;
+        driverError = imuDriver.read(imuData);
+        if (driverError != MPU6050::DriverError::Success)
+        {
+            statusLed.notifyError();
+            return;
+        }
     }
 
+#if ENABLE_INTERFACE
+    if (imuMode != InterfaceImuMode::FreezeMotionData)
+#else
     CircularMotionData motionData;
-    motionProcessor.update(imuData, imuRangeFactors, motionData);
+#endif
+    {
+        motionProcessor.update(imuData, imuRangeFactors, motionData);
+    }
 
-    float sinAngle = (0.5 * lightDistance_m) * motionData.invRadius;
-    float angle;
-    if (fabsf(sinAngle) <= 1)
-        angle = asin(angle);
-    else
-        angle = sign(sinAngle) * (PI * 0.5F);
+#if ENABLE_INTERFACE
+    if (imuMode != InterfaceImuMode::FreezeAutomaticDirection)
+#endif
+    {
+        float sinAngle = (0.5 * lightDistance_m) * motionData.invRadius;
+        float angle;
+        if (fabsf(sinAngle) <= 1)
+            angle = asin(angle);
+        else
+            angle = sign(sinAngle) * (PI * 0.5F);
 
-    automaticDirection = angle;
+        automaticDirection = angle;
+    }
+
+#if ENABLE_INTERFACE
+    imuTimestamp = currentTimestamp_ms;
+#endif
 }
 
 static float evaluateAutomaticMode(ControlElementAction action)

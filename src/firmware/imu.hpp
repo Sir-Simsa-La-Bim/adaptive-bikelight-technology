@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "compiler_switches.h"
 #include "vec.hpp"
 
 union ImuData

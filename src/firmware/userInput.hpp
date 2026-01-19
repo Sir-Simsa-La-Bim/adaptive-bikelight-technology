@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "compiler_switches.h"
 #include "util.hpp"
 
 class DebouncedButton

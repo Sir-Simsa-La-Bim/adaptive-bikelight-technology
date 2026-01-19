@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "compiler_switches.h"
 #include "util.hpp"
 
 template <class Tsize, class Tentry, class Tsum>

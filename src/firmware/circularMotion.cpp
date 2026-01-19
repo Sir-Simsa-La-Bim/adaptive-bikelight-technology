@@ -2,6 +2,12 @@
 #include <math.h>
 #include "util.hpp"
 
+void CircularMotionCalibrationBuilder::build(CircularMotionCalibration &calibration) const
+{
+    calibration.gyroOffsetX = calcOffset(gyroXAcc);
+    calibration.gyroOffsetY = calcOffset(gyroYAcc);
+}
+
 EncodedRadius CircularMotionProcessor::encodeRadius(float radius)
 {
     if (!isfinite(radius))
@@ -55,16 +61,10 @@ EncodedRadius CircularMotionProcessor::calcRadius(float wx, float wy)
     return encodeRadius(radius);
 }
 
-void CircularMotionProcessor::setCalibration(CircularMotionCalibrationBuilder &calibration)
-{
-    gyroOffsetX = calibration.calcOffset(calibration.gyroXAcc);
-    gyroOffsetY = calibration.calcOffset(calibration.gyroYAcc);
-}
-
 void CircularMotionProcessor::update(const ImuData &imuData, const ImuRangeFactors &imuRange, CircularMotionData &result)
 {
-    float wx = gyroXFilter.updateAsFloat(imuData.fields.gyroX + gyroOffsetX) * imuRange.gyroFactor_rad;
-    float wy = gyroYFilter.updateAsFloat(imuData.fields.gyroY + gyroOffsetY) * imuRange.gyroFactor_rad;
+    float wx = gyroXFilter.updateAsFloat(imuData.fields.gyroX + calibration.gyroOffsetX) * imuRange.gyroFactor_rad;
+    float wy = gyroYFilter.updateAsFloat(imuData.fields.gyroY + calibration.gyroOffsetY) * imuRange.gyroFactor_rad;
     EncodedRadius unfilteredEncodedRadius = calcRadius(wx, wy);
     EncodedRadius filteredEncodedRadius = radiusFilter.update(unfilteredEncodedRadius);
     result.invRadius = decodeInvRadius(filteredEncodedRadius);
