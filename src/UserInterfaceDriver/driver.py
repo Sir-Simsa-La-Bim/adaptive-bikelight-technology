@@ -42,6 +42,10 @@ class Parameter:
         self._paramId = paramId
         self._byteSize = byteSize
 
+    @property
+    def byteSize(self)->int:
+        return self._byteSize
+
     def isValid(self, value : typing.Any)->bool:
         """
         Tests if the given value can be assigned to this parameter.
@@ -67,6 +71,10 @@ class IntParameter(Parameter):
     def __init__(self, name: str, paramId: int, byteSize: int, signed: bool) -> None:
         super().__init__(name, paramId, byteSize)
         self._signed = signed
+
+    @property
+    def signed(self)->bool:
+        return self._signed
 
     def isValid(self, value: typing.Any) -> bool:
         return isinstance(value, int)
