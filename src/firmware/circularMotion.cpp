@@ -42,7 +42,7 @@ float CircularMotionProcessor::decodeInvRadius(EncodedRadius encodedRadius)
     if (encodedRadius < 0) // radius > 0
         quantizedRadius = encodedRadius + ((uint16_t)1 << 15);
     else // radius < 0
-        quantizedRadius = ((uint16_t)1 << 15) - encodedRadius;
+        quantizedRadius = -(((uint16_t)1 << 15) - encodedRadius);
 
     const float quantizationFactor = (float)(((uint16_t)1 << 15) - 1) / maxEncodableRadius;
     return quantizationFactor / quantizedRadius;

@@ -172,16 +172,16 @@ public:
 
     uint32_t getBits(uint8_t bitPos, uint8_t bitWidth) const
     {
-        uint32_t mask = ((uint32_t)1u << bitWidth) - 1u;
+        uint32_t mask = (uint32_t(1) << bitWidth) - 1u;
         return (bits >> bitPos) & mask;
     }
 
     void setBits(uint8_t bitPos, uint8_t bitWidth, uint32_t value)
     {
-        uint32_t mask = ((uint32_t)1u << bitWidth) - 1u;
+        uint32_t mask = (uint32_t(1) << bitWidth) - 1u;
 
         uint32_t shiftedValue = value << bitPos;
-        uint32_t shiftedMask = mask << bitWidth;
+        uint32_t shiftedMask = mask << bitPos;
 
         bits ^= (bits ^ shiftedValue) & shiftedMask;
     }
