@@ -18,7 +18,7 @@ void nextTimestep()
     timestepAccumulation_us += currentTimestep_us;
     while (timestepAccumulation_us > 1000)
     {
-        timestepAccumulation_us -= 100;
+        timestepAccumulation_us -= 1000;
         currentTimestep_ms++;
     }
 

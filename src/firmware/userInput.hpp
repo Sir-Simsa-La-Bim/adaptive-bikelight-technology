@@ -22,7 +22,7 @@ public:
         this->steadyTime_us = 0;
     }
 
-    uint32_t getPin()
+    uint8_t getPin()
     {
         return pin;
     }
