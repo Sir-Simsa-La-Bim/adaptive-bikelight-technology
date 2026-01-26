@@ -12,10 +12,10 @@
 #include "interface.hpp"
 #endif
 
-#define PIN_SERVO 9
+#define PIN_SERVO 6
 #define PIN_BUTTON_LEFT 12
 #define PIN_BUTTON_RIGHT 11
-#define PIN_LED 13
+#define PIN_LED 4
 
 enum class OperatingMode : uint8_t
 {
@@ -167,7 +167,7 @@ void loop()
         break;
     }
 
-    servoDriver.update(direction);
+    servoDriver.update(-direction);
     statusLed.update();
 
 #if ENABLE_INTERFACE
