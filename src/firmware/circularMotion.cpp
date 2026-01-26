@@ -4,8 +4,8 @@
 
 void CircularMotionCalibrationBuilder::build(CircularMotionCalibration &calibration) const
 {
-    calibration.gyroOffsetX = calcOffset(gyroXAcc);
-    calibration.gyroOffsetY = calcOffset(gyroYAcc);
+    calibration.gyroYawOffset = calcOffset(gyroYawAcc);
+    calibration.gyroPitchOffset = calcOffset(gyroPitchAcc);
 }
 
 EncodedRadius CircularMotionProcessor::encodeRadius(float radius)
@@ -48,24 +48,31 @@ float CircularMotionProcessor::decodeInvRadius(EncodedRadius encodedRadius)
     return quantizationFactor / quantizedRadius;
 }
 
-EncodedRadius CircularMotionProcessor::calcRadius(float wx, float wy)
+EncodedRadius CircularMotionProcessor::calcRadius(float gyroYaw, float gyroPitch)
 {
-    // w^2 = wx^2 + wy^2
-    // az = wy / wx * g
-    // radius = az / w^2 = (wy / wx * g) / (wx^2 + wy^2) = (g * wy) / (wx * (wx^2 + wy^2))
+    // total^2 = yaw^2 + pitch^2
+    // az = pitch / yaw * g
+    // radius = az / total^2 = (pitch / yaw * g) / (yaw^2 + pitch^2) = (g * pitch) / (yaw * (yaw^2 + pitch^2))
 
-    if (wx == 0)
+    if (gyroYaw == 0)
         return infiniteRadius;
 
-    float radius = (gravityAccel_si * wy) / (wx * (wx * wx + wy * wy));
-    return encodeRadius(radius);
+    float yawAbs = fabsf(gyroYaw);
+    float pitchAbs = fabsf(gyroPitch);
+
+    Float32Info radius = (gravityAccel_si * pitchAbs) / (yawAbs * (yawAbs * yawAbs + pitchAbs * pitchAbs));
+
+    // Quick bit-hack to set the radius sign equal to the yaw sign
+    radius.setSign(Float32Info(gyroYaw).getSign());
+
+    return encodeRadius(radius.value);
 }
 
 void CircularMotionProcessor::update(const ImuData &imuData, const ImuRangeFactors &imuRange, CircularMotionData &result)
 {
-    float wx = gyroXFilter.updateAsFloat(imuData.fields.gyroX + calibration.gyroOffsetX) * imuRange.gyroFactor_rad;
-    float wy = gyroYFilter.updateAsFloat(imuData.fields.gyroY + calibration.gyroOffsetY) * imuRange.gyroFactor_rad;
-    EncodedRadius unfilteredEncodedRadius = calcRadius(wx, wy);
+    float gyroYaw = -gyroXFilter.updateAsFloat(getGyroYaw(imuData) + calibration.gyroYawOffset) * imuRange.gyroFactor_rad;
+    float gyroPitch = gyroYFilter.updateAsFloat(getGyroPitch(imuData) + calibration.gyroPitchOffset) * imuRange.gyroFactor_rad;
+    EncodedRadius unfilteredEncodedRadius = calcRadius(gyroYaw, gyroPitch);
     EncodedRadius filteredEncodedRadius = radiusFilter.update(unfilteredEncodedRadius);
     result.invRadius = decodeInvRadius(filteredEncodedRadius);
 }

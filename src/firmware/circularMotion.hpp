@@ -9,6 +9,21 @@
 #include "interface.hpp"
 #endif
 
+inline int16_t getGyroYaw(const ImuData &sample)
+{
+    return sample.fields.gyroX;
+}
+
+inline int16_t getGyroPitch(const ImuData &sample)
+{
+    return sample.fields.gyroY;
+}
+
+inline int16_t getGyroRoll(const ImuData &sample)
+{
+    return sample.fields.gyroZ;
+}
+
 struct CircularMotionData
 {
     float invRadius;
@@ -21,21 +36,21 @@ typedef CombinedFilter<uint8_t, EncodedRadius, int32_t> RadiusFilter;
 class CircularMotionCalibration
 {
 public:
-    int16_t gyroOffsetX;
-    int16_t gyroOffsetY;
+    int16_t gyroYawOffset;
+    int16_t gyroPitchOffset;
 
     CircularMotionCalibration()
     {
-        gyroOffsetX = 0;
-        gyroOffsetY = 0;
+        gyroYawOffset = 0;
+        gyroPitchOffset = 0;
     }
 };
 
 class CircularMotionCalibrationBuilder
 {
 private:
-    int32_t gyroXAcc;
-    int32_t gyroYAcc;
+    int32_t gyroYawAcc;
+    int32_t gyroPitchAcc;
     uint16_t sampleCount;
 
     int16_t calcOffset(int32_t accValue) const
@@ -46,8 +61,8 @@ private:
 public:
     CircularMotionCalibrationBuilder()
     {
-        gyroXAcc = 0;
-        gyroYAcc = 0;
+        gyroYawAcc = 0;
+        gyroPitchAcc = 0;
         sampleCount = 0;
     }
 
@@ -58,8 +73,8 @@ public:
 
     void addSample(ImuData &sample)
     {
-        gyroXAcc += sample.fields.gyroX;
-        gyroYAcc += sample.fields.gyroY;
+        gyroYawAcc += getGyroYaw(sample);
+        gyroPitchAcc += getGyroPitch(sample);
         sampleCount++;
     }
 
