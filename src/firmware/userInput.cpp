@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include "timestep.hpp"
 
-static const int debouncingTime_us = 20 * 1000;
+static const uint32_t debouncingTime_us = 20 * 1000;
 
 void DebouncedButton::update()
 {
