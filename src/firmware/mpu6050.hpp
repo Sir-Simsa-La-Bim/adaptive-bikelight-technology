@@ -4,7 +4,6 @@
 #include "compiler_switches.h"
 #include "imu.hpp"
 #include "util.hpp"
-#include "vec.hpp"
 
 namespace MPU6050
 {

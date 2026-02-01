@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 #include "compiler_switches.h"
-#include "vec.hpp"
 
 union ImuData
 {
@@ -16,16 +15,6 @@ union ImuData
         int16_t accelZ;
     } fields;
     int16_t array[sizeof(fields) / sizeof(int16_t)];
-
-    Vec3<int16_t> gyro()
-    {
-        return Vec3<int16_t>(&array[0]);
-    }
-
-    Vec3<int16_t> accel()
-    {
-        return Vec3<int16_t>(&array[3]);
-    }
 };
 
 struct ImuRangeFactors
