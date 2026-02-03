@@ -61,9 +61,9 @@ static const uint16_t calibrationMinSampleCount = 300;
 static int16_t gyroXFilterBuffer[10];
 static int16_t gyroYFilterBuffer[10];
 // hier
-static EncodedRadius radiusMedianFilterBuffer[1];
+static EncodedRadius radiusMedianFilterBuffer[5];
 // hier
-static EncodedRadius radiusMovAvgFilterBuffer[1];
+static EncodedRadius radiusMovAvgFilterBuffer[10];
 static CircularMotionProcessor motionProcessor(
     RawValueFilter(gyroXFilterBuffer, ARRAY_SIZE(gyroXFilterBuffer)),
     RawValueFilter(gyroYFilterBuffer, ARRAY_SIZE(gyroYFilterBuffer)),
@@ -282,19 +282,28 @@ static void updateCurveData()
         motionProcessor.update(imuData, imuRangeFactors, motionData);
     }
 
-
 // hier falls Begrenzung
 #if ENABLE_INTERFACE
     if (imuMode != InterfaceImuMode::FreezeAutomaticDirection)
 #endif
     {
         float sinAngle = (0.5 * lightDistance_m) * motionData.invRadius;
-        float angle;
-        if (fabsf(sinAngle) <= 1)
-            angle = asin(angle);
-        else
-            angle = sign(sinAngle) * (PI * 0.5F);
 
+        // float angle;
+        // if (fabsf(sinAngle) <= 1)
+        //     angle = asin(angle);
+        // else
+        //     angle = sign(sinAngle) * (PI * 0.5F);
+        // automaticDirection = angle;
+
+        float limitangle = 0.25 * PI; // 45°
+        float inputangle = asin(sinAngle);
+        float angle;
+        if (fabsf(inputangle) <= limitangle)
+            angle = inputangle;
+        else
+            angle = sign(inputangle) * limitangle;
+        
         automaticDirection = angle;
     }
 
