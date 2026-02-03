@@ -40,7 +40,8 @@ enum class InterfaceImuMode : uint8_t
 };
 #endif
 
-static const float lightDistance_m = 5.0;
+// hier
+static const float lightDistance_m = 3.0;
 
 static const MPU6050::DriverSetupConfig imuSetup = {
     .sampleRateDivider = 50,
@@ -59,8 +60,10 @@ static const uint16_t calibrationMinSampleCount = 300;
 
 static int16_t gyroXFilterBuffer[10];
 static int16_t gyroYFilterBuffer[10];
-static EncodedRadius radiusMedianFilterBuffer[5];
-static EncodedRadius radiusMovAvgFilterBuffer[10];
+// hier
+static EncodedRadius radiusMedianFilterBuffer[1];
+// hier
+static EncodedRadius radiusMovAvgFilterBuffer[1];
 static CircularMotionProcessor motionProcessor(
     RawValueFilter(gyroXFilterBuffer, ARRAY_SIZE(gyroXFilterBuffer)),
     RawValueFilter(gyroYFilterBuffer, ARRAY_SIZE(gyroYFilterBuffer)),
@@ -69,8 +72,9 @@ static CircularMotionProcessor motionProcessor(
 static const ServoDriverSettings servoSettings(2000.0F / 270.0F, 90.0F);
 static ServoDriver servoDriver(servoSettings, 1500);
 
+// zeiten hier
 static const ControlElementSettings controlElementSettings = {
-    .longPressThreshold_us = 500000,
+    .longPressThreshold_us = 200000,
     .bothButtonPressThreshold_us = 1000000,
 };
 static ControlElement controlElement(controlElementSettings, PIN_BUTTON_LEFT, PIN_BUTTON_RIGHT);
@@ -83,12 +87,14 @@ static const StatusLedSettings statusLedSettings = {
 };
 static StatusLed statusLed(statusLedSettings);
 
+// schrittgrösse
 static const float automaticHintStep = 20.0 * DEG_TO_RAD;
 static const float automaticFixedStep = 20.0 * DEG_TO_RAD;
 static const float manualClickStep = 10.0 * DEG_TO_RAD;
 static const float manualFixedStep = 20.0 * DEG_TO_RAD;
 static const int8_t manualStepLimit = 5;
 
+// anfangseinstellung modus
 static OperatingMode operatingMode = OperatingMode::Automatic;
 static OperatingSubmode operatingSubmode = OperatingSubmode::Main;
 static Direction operatingDirection = Direction::None;
@@ -276,6 +282,8 @@ static void updateCurveData()
         motionProcessor.update(imuData, imuRangeFactors, motionData);
     }
 
+
+// hier falls Begrenzung
 #if ENABLE_INTERFACE
     if (imuMode != InterfaceImuMode::FreezeAutomaticDirection)
 #endif
