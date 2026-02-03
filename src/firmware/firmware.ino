@@ -287,7 +287,7 @@ static void updateCurveData()
     if (imuMode != InterfaceImuMode::FreezeAutomaticDirection)
 #endif
     {
-        float sinAngle = (0.5 * lightDistance_m) * motionData.invRadius;
+        float sinAngle = (0.5F * lightDistance_m) * motionData.invRadius;
 
         // float angle;
         // if (fabsf(sinAngle) <= 1)
@@ -296,13 +296,13 @@ static void updateCurveData()
         //     angle = sign(sinAngle) * (PI * 0.5F);
         // automaticDirection = angle;
 
-        float limitangle = 0.25 * PI; // 45°
+        float limitangle = 0.375F * PI; // 90°
         float inputangle = asin(sinAngle);
         float angle;
-        if (fabsf(inputangle) <= limitangle)
+        if (fabsf(sinAngle) <= sin(limitangle))
             angle = inputangle;
         else
-            angle = sign(inputangle) * limitangle;
+            angle = sign(sinAngle) * limitangle;
         
         automaticDirection = angle;
     }
