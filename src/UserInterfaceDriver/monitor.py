@@ -45,7 +45,9 @@ async def runMonitor(port: str, cancelToken: CancelToken|None = None, refreshInt
 
 def runMonitorForever(port: str, refreshInterval: float = _DEFAULT_REFRESH_INTERVAL)->None:
     import asyncio
-    asyncio.get_event_loop().run_until_complete(runMonitor(port, refreshInterval=refreshInterval))
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(runMonitor(port, refreshInterval=refreshInterval))
 
 if __name__ == '__main__':
     port = input('Run monitor on port: ')
