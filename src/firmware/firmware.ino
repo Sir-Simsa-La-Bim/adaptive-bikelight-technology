@@ -40,7 +40,7 @@ enum class InterfaceImuMode : uint8_t
 };
 #endif
 
-static const float lightDistance_m = 5.0;
+static const float lightDistance_m = 3.0;
 
 static const MPU6050::DriverSetupConfig imuSetup = {
     .sampleRateDivider = 50,
@@ -70,7 +70,7 @@ static const ServoDriverSettings servoSettings(2000.0F / 270.0F, 90.0F);
 static ServoDriver servoDriver(servoSettings, 1500);
 
 static const ControlElementSettings controlElementSettings = {
-    .longPressThreshold_us = 500000,
+    .longPressThreshold_us = 200000,
     .bothButtonPressThreshold_us = 1000000,
 };
 static ControlElement controlElement(controlElementSettings, PIN_BUTTON_LEFT, PIN_BUTTON_RIGHT);
@@ -85,6 +85,7 @@ static StatusLed statusLed(statusLedSettings);
 
 static const float automaticHintStep = 20.0 * DEG_TO_RAD;
 static const float automaticFixedStep = 20.0 * DEG_TO_RAD;
+static const float automaticAngleLimit = 67.5 * DEG_TO_RAD;
 static const float manualClickStep = 10.0 * DEG_TO_RAD;
 static const float manualFixedStep = 20.0 * DEG_TO_RAD;
 static const int8_t manualStepLimit = 5;
@@ -280,12 +281,17 @@ static void updateCurveData()
     if (imuMode != InterfaceImuMode::FreezeAutomaticDirection)
 #endif
     {
-        float sinAngle = (0.5 * lightDistance_m) * motionData.invRadius;
-        float angle;
-        if (fabsf(sinAngle) <= 1)
-            angle = asin(angle);
+        static const float sinAngleLimit = sin(automaticAngleLimit);
+
+        Float32Info sinAngle = (0.5F * lightDistance_m) * motionData.invRadius;
+        Float32Info angle;
+        if (fabsf(sinAngle) <= sinAngleLimit)
+            angle = (float)asinf(sinAngle);
         else
-            angle = sign(sinAngle) * (PI * 0.5F);
+        {
+            angle = automaticAngleLimit;
+            angle.setSign(sinAngle.getSign());
+        }
 
         automaticDirection = angle;
     }

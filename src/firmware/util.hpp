@@ -220,6 +220,11 @@ public:
     {
         return (bits & 0x7FFFFFFFu) == 0;
     }
+
+    operator float() const
+    {
+        return value;
+    }
 };
 
 template <typename T>
